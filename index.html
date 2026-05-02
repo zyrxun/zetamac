@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arithmetic Game</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f0f0;
+    --card: #fff;
+    --border: #ccc;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --danger: #dc2626;
+    --text: #111;
+    --muted: #555;
+    --radius: 8px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .page { display: none; width: 100%; max-width: 600px; }
+  .page.active { display: block; }
+
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+  h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem; }
+  h3 { font-size: 1rem; font-weight: 600; margin-bottom: .5rem; }
+  p  { color: var(--muted); margin-bottom: 1rem; line-height: 1.5; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  label { display: flex; align-items: center; gap: .5rem; font-size: .95rem; margin-bottom: .4rem; cursor: pointer; }
+  input[type="checkbox"] { width: 1.1rem; height: 1.1rem; cursor: pointer; accent-color: var(--accent); }
+
+  .range-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; font-size: .9rem; color: var(--muted); margin-left: 1.6rem; margin-bottom: .6rem; }
+  .range-row input[type="number"] {
+    width: 4rem; padding: .25rem .4rem; border: 1px solid var(--border);
+    border-radius: 4px; font-size: .9rem; text-align: center;
+  }
+
+  select, input[type="text"] {
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: .4rem .6rem; font-size: 1rem; background: var(--card);
+  }
+
+  .btn {
+    display: inline-block; padding: .55rem 1.3rem;
+    border: 1px solid var(--border); border-radius: 4px;
+    font-size: 1rem; cursor: pointer; background: var(--card);
+    transition: background .15s;
+  }
+  .btn:hover { background: #e8e8e8; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn-sm { padding: .3rem .7rem; font-size: .85rem; }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  .row-end { display: flex; justify-content: flex-end; gap: .6rem; margin-top: .8rem; }
+
+  /* ── HOME ── */
+  #home .subtitle { font-size: .95rem; }
+
+  .player-section { margin-bottom: 1rem; }
+  .player-section label { font-weight: 600; display: block; margin-bottom: .4rem; }
+
+  #playerList { width: 100%; margin-bottom: .5rem; }
+
+  .new-player-row { display: flex; gap: .5rem; margin-top: .5rem; }
+  #newPlayerName { flex: 1; }
+
+  /* ── GAME ── */
+  #game { text-align: center; }
+
+  #gameTimer {
+    font-size: 3rem; font-weight: 700; margin: 1rem 0 .5rem;
+    font-variant-numeric: tabular-nums;
+  }
+  #gameTimer.urgent { color: var(--danger); }
+
+  #gameScore { font-size: 1.1rem; color: var(--muted); margin-bottom: 2rem; }
+
+  #gameProblem { font-size: 3rem; font-weight: 700; margin-bottom: 1.5rem; min-height: 3.5rem; }
+
+  #gameAnswer {
+    font-size: 2rem; width: 8rem; text-align: center;
+    border: 2px solid var(--border); border-radius: var(--radius);
+    padding: .4rem; outline: none;
+  }
+  #gameAnswer:focus { border-color: var(--accent); }
+  #gameAnswer.wrong { border-color: var(--danger); background: #fee2e2; }
+
+  #gameHint { font-size: .85rem; color: var(--muted); margin-top: .5rem; min-height: 1.2rem; }
+
+  /* ── RESULTS ── */
+  #results { text-align: center; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: .7rem; margin-bottom: 1rem;
+  }
+  .stat-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: .8rem;
+    text-align: center;
+  }
+  .stat-box .val { font-size: 1.8rem; font-weight: 700; }
+  .stat-box .lbl { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+
+  .ops-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .ops-table th, .ops-table td { border: 1px solid var(--border); padding: .45rem .6rem; text-align: center; }
+  .ops-table th { background: #f5f5f5; font-weight: 600; }
+
+  /* ── STATS ── */
+  .period-btns { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .period-btn {
+    padding: .3rem .8rem; border: 1px solid var(--border);
+    border-radius: 4px; font-size: .85rem; cursor: pointer; background: var(--card);
+  }
+  .period-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  #chartCanvas { width: 100% !important; }
+
+  .history-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .history-table th, .history-table td { border: 1px solid var(--border); padding: .4rem .5rem; text-align: center; }
+  .history-table th { background: #f5f5f5; cursor: pointer; user-select: none; }
+  .history-table th:hover { background: #e8e8e8; }
+
+  .pagination { display: flex; gap: .4rem; align-items: center; margin-top: .6rem; flex-wrap: wrap; }
+  .page-info { font-size: .85rem; color: var(--muted); }
+
+  .player-toggle { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .player-chip {
+    padding: .2rem .7rem; border: 1px solid var(--border);
+    border-radius: 999px; font-size: .8rem; cursor: pointer; background: var(--card);
+  }
+  .player-chip.active { color: #fff; border-color: transparent; }
+
+  .export-import { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
+
+  @media (max-width: 420px) {
+    h1 { font-size: 1.5rem; }
+    #gameProblem { font-size: 2.2rem; }
+    #gameTimer { font-size: 2.2rem; }
+    #gameAnswer { font-size: 1.5rem; width: 7rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HOME ══════════════ -->
+<div id="home" class="page active">
+  <h1>Arithmetic Game</h1>
+  <p class="subtitle">A fast-paced speed drill. Solve as many problems as you can before time runs out.</p>
+
+  <div class="card">
+    <h2>Player</h2>
+    <div class="player-section">
+      <label for="playerList">Select player</label>
+      <select id="playerList" onchange="onPlayerSelect()">
+        <option value="">— choose —</option>
+      </select>
+    </div>
+    <div class="new-player-row">
+      <input type="text" id="newPlayerName" placeholder="New player name…" maxlength="30">
+      <button class="btn btn-sm" onclick="createPlayer()">Create</button>
+    </div>
+    <div style="margin-top:.6rem;" id="deletePlayerRow" style="display:none">
+      <button class="btn btn-sm btn-danger" onclick="deletePlayer()">Delete selected player</button>
+    </div>
+    <div class="export-import" style="margin-top:.8rem;">
+      <button class="btn btn-sm" onclick="exportProfile()">Export profile</button>
+      <label class="btn btn-sm" style="cursor:pointer;">
+        Import profile <input type="file" accept=".json" style="display:none" onchange="importProfile(event)">
+      </label>
+    </div>
+  </div>
+
+  <div class="card" id="settingsCard">
+    <h2>Settings</h2>
+
+    <label><input type="checkbox" id="opAdd" checked> Addition</label>
+    <div class="range-row">
+      Range: (
+      <input type="number" id="addA1" value="2" min="1"> to
+      <input type="number" id="addA2" value="100" min="1">
+      ) + (
+      <input type="number" id="addB1" value="2" min="1"> to
+      <input type="number" id="addB2" value="100" min="1">
+      )
+    </div>
+
+    <label><input type="checkbox" id="opSub" checked> Subtraction</label>
+    <p style="margin-left:1.6rem;font-size:.85rem;color:var(--muted);margin-bottom:.6rem;">Addition problems in reverse.</p>
+
+    <label><input type="checkbox" id="opMul" checked> Multiplication</label>
+    <div class="range-row">
+      Range: (
+      <input type="number" id="mulA1" value="2" min="1"> to
+      <input type="number" id="mulA2" value="12" min="1">
+      ) × (
+      <input type="number" id="mulB1" value="2" min="1"> to
+      <input type="number" id="mulB2" value="100" min="1">
+      )
+    </div>
+
+    <label><input type="checkbox" id="opDiv" checked> Division</label>
+    <p style="margin-left:1.6rem;font-size:.85rem;color:var(--muted);margin-bottom:.6rem;">Multiplication problems in reverse.</p>
+
+    <div class="row" style="margin-top:.4rem;">
+      <span>Duration:</span>
+      <select id="duration">
+        <option value="30">30 seconds</option>
+        <option value="60">60 seconds</option>
+        <option value="120" selected>120 seconds</option>
+        <option value="180">180 seconds</option>
+        <option value="300">300 seconds</option>
+      </select>
+    </div>
+
+    <div class="row-end">
+      <button class="btn" onclick="showStats()">View stats</button>
+      <button class="btn btn-primary" id="startBtn" onclick="startGame()" disabled>Start</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ GAME ══════════════ -->
+<div id="game" class="page">
+  <div id="gameTimer">2:00</div>
+  <div id="gameScore">Score: 0 &nbsp;|&nbsp; Attempted: 0</div>
+  <div id="gameProblem"></div>
+  <input type="number" inputmode="numeric" id="gameAnswer" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="?">
+  <div id="gameHint"></div>
+</div>
+
+<!-- ══════════════ RESULTS ══════════════ -->
+<div id="results" class="page">
+  <h1>Results</h1>
+  <div class="stat-grid" id="resultCards"></div>
+
+  <div class="card">
+    <h3>By operation</h3>
+    <table class="ops-table" id="opsTable">
+      <thead><tr><th>Op</th><th>Correct</th><th>Attempted</th><th>Accuracy</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="row-end">
+    <button class="btn" onclick="showHome()">Home</button>
+    <button class="btn btn-primary" onclick="showStats()">View stats</button>
+  </div>
+</div>
+
+<!-- ══════════════ STATS ══════════════ -->
+<div id="stats" class="page">
+  <div class="row" style="justify-content:space-between;margin-bottom:1rem;">
+    <h1 style="margin:0">Stats</h1>
+    <button class="btn btn-sm" onclick="showHome()">← Home</button>
+  </div>
+
+  <div class="card">
+    <h3>Player filter</h3>
+    <div class="player-toggle" id="playerToggle"></div>
+    <div class="export-import">
+      <button class="btn btn-sm" onclick="exportProfile()">Export profile</button>
+      <label class="btn btn-sm" style="cursor:pointer;">
+        Import profile <input type="file" accept=".json" style="display:none" onchange="importProfile(event)">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>All-time summary</h3>
+    <div class="stat-grid" id="summaryCards"></div>
+  </div>
+
+  <div class="card">
+    <h3>Per-operation</h3>
+    <table class="ops-table" id="allOpsTable">
+      <thead><tr><th>Op</th><th>Games</th><th>Avg correct</th><th>Best</th><th>Accuracy</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Score progression</h3>
+    <div class="period-btns">
+      <button class="period-btn active" onclick="setPeriod('1W',this)">1W</button>
+      <button class="period-btn" onclick="setPeriod('1M',this)">1M</button>
+      <button class="period-btn" onclick="setPeriod('3M',this)">3M</button>
+      <button class="period-btn" onclick="setPeriod('1Y',this)">1Y</button>
+      <button class="period-btn" onclick="setPeriod('All',this)">All</button>
+    </div>
+    <canvas id="chartCanvas" height="220"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>Session history</h3>
+    <table class="history-table" id="historyTable">
+      <thead>
+        <tr>
+          <th onclick="sortHistory('date')">Date ▲</th>
+          <th onclick="sortHistory('score')">Score</th>
+          <th onclick="sortHistory('accuracy')">Accuracy</th>
+          <th>Duration</th>
+          <th>Player</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script>
+// ─── Storage ─────────────────────────────────────────────────────────────────
+const PLAYERS_KEY  = 'zetamac_players';
+const SETTINGS_KEY = 'zetamac_settings';
+
+function loadPlayers() {
+  try { return JSON.parse(localStorage.getItem(PLAYERS_KEY)) || {}; } catch { return {}; }
+}
+function savePlayers(p) { localStorage.setItem(PLAYERS_KEY, JSON.stringify(p)); }
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let activePlayer = null;
+let gameInterval = null;
+let timeLeft = 120;
+let score = 0;
+let attempted = 0;
+let opStats = {};
+let currentProblem = null;
+
+// chart state
+let chartInstance = null;
+let currentPeriod = '1W';
+let historySort = { key: 'date', asc: false };
+let historyPage = 0;
+const PAGE_SIZE = 10;
+
+// stats filter: set of active player names
+let statsFilter = new Set();
+
+// palette for chart lines
+const COLORS = ['#2563eb','#16a34a','#dc2626','#d97706','#7c3aed','#0891b2'];
+
+// ─── Home ─────────────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function showHome() { populatePlayerList(); loadSettingsUI(); showPage('home'); }
+function showStats() { renderStats(); showPage('stats'); }
+
+function populatePlayerList() {
+  const players = loadPlayers();
+  const sel = document.getElementById('playerList');
+  sel.innerHTML = '<option value="">— choose —</option>';
+  Object.keys(players).sort().forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    if (name === activePlayer) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  updateStartBtn();
+}
+
+function onPlayerSelect() {
+  const val = document.getElementById('playerList').value;
+  activePlayer = val || null;
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  document.getElementById('startBtn').disabled = !activePlayer;
+  document.getElementById('deletePlayerRow') &&
+    (document.getElementById('deletePlayerRow').style.display = activePlayer ? 'block' : 'none');
+}
+
+function createPlayer() {
+  const name = document.getElementById('newPlayerName').value.trim();
+  if (!name) return alert('Enter a name.');
+  const players = loadPlayers();
+  if (players[name]) return alert('Player already exists.');
+  players[name] = { sessions: [] };
+  savePlayers(players);
+  activePlayer = name;
+  document.getElementById('newPlayerName').value = '';
+  populatePlayerList();
+}
+
+function deletePlayer() {
+  if (!activePlayer) return;
+  if (!confirm(`Delete "${activePlayer}" and all their stats?`)) return;
+  const players = loadPlayers();
+  delete players[activePlayer];
+  savePlayers(players);
+  activePlayer = null;
+  populatePlayerList();
+}
+
+function exportProfile() {
+  if (!activePlayer) return alert('Select a player first.');
+  const players = loadPlayers();
+  const data = { player: activePlayer, sessions: players[activePlayer]?.sessions || [] };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `zetamac_${activePlayer}.json`;
+  a.click();
+}
+
+function importProfile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.player || !Array.isArray(data.sessions)) throw new Error('bad format');
+      const players = loadPlayers();
+      if (!players[data.player]) players[data.player] = { sessions: [] };
+      // deduplicate by date
+      const existing = new Set(players[data.player].sessions.map(s => s.date));
+      data.sessions.forEach(s => { if (!existing.has(s.date)) players[data.player].sessions.push(s); });
+      savePlayers(players);
+      alert(`Imported ${data.sessions.length} sessions for "${data.player}".`);
+      populatePlayerList();
+    } catch { alert('Invalid file.'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ─── Settings UI ─────────────────────────────────────────────────────────────
+function loadSettingsUI() {
+  const s = loadSettings();
+  if (!s || !Object.keys(s).length) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  const check = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+  if (s.opAdd  !== undefined) check('opAdd',  s.opAdd);
+  if (s.opSub  !== undefined) check('opSub',  s.opSub);
+  if (s.opMul  !== undefined) check('opMul',  s.opMul);
+  if (s.opDiv  !== undefined) check('opDiv',  s.opDiv);
+  if (s.addA1) set('addA1', s.addA1); if (s.addA2) set('addA2', s.addA2);
+  if (s.addB1) set('addB1', s.addB1); if (s.addB2) set('addB2', s.addB2);
+  if (s.mulA1) set('mulA1', s.mulA1); if (s.mulA2) set('mulA2', s.mulA2);
+  if (s.mulB1) set('mulB1', s.mulB1); if (s.mulB2) set('mulB2', s.mulB2);
+  if (s.duration) set('duration', s.duration);
+}
+
+function readSettingsUI() {
+  const g = id => document.getElementById(id);
+  return {
+    opAdd: g('opAdd').checked, opSub: g('opSub').checked,
+    opMul: g('opMul').checked, opDiv: g('opDiv').checked,
+    addA1: +g('addA1').value, addA2: +g('addA2').value,
+    addB1: +g('addB1').value, addB2: +g('addB2').value,
+    mulA1: +g('mulA1').value, mulA2: +g('mulA2').value,
+    mulB1: +g('mulB1').value, mulB2: +g('mulB2').value,
+    duration: +g('duration').value,
+  };
+}
+
+// ─── Game ─────────────────────────────────────────────────────────────────────
+function startGame() {
+  if (!activePlayer) return;
+  const s = readSettingsUI();
+  const ops = [];
+  if (s.opAdd) ops.push('+');
+  if (s.opSub) ops.push('-');
+  if (s.opMul) ops.push('×');
+  if (s.opDiv) ops.push('÷');
+  if (!ops.length) return alert('Enable at least one operation.');
+  saveSettings(s);
+
+  score = 0; attempted = 0;
+  opStats = { '+': {c:0,a:0}, '-': {c:0,a:0}, '×': {c:0,a:0}, '÷': {c:0,a:0} };
+  timeLeft = s.duration;
+
+  showPage('game');
+  updateTimerDisplay();
+  updateScoreDisplay();
+  nextProblem(s, ops);
+
+  const ansEl = document.getElementById('gameAnswer');
+  ansEl.classList.remove('wrong');
+  ansEl.value = '';
+  ansEl.focus();
+
+  ansEl.oninput = () => checkAnswer(s, ops);
+
+  gameInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) endGame(s);
+  }, 1000);
+}
+
+function ri(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateProblem(s, ops) {
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  let a, b, answer, display;
+  if (op === '+') {
+    a = ri(s.addA1, s.addA2); b = ri(s.addB1, s.addB2);
+    answer = a + b; display = `${a} + ${b}`;
+  } else if (op === '-') {
+    a = ri(s.addA1, s.addA2); b = ri(s.addB1, s.addB2);
+    const big = Math.max(a,b), small = Math.min(a,b);
+    answer = big - small; display = `${big} − ${small}`;
+  } else if (op === '×') {
+    a = ri(s.mulA1, s.mulA2); b = ri(s.mulB1, s.mulB2);
+    answer = a * b; display = `${a} × ${b}`;
+  } else {
+    a = ri(s.mulA1, s.mulA2); b = ri(s.mulB1, s.mulB2);
+    answer = b; display = `${a * b} ÷ ${a}`;
+    a = a * b; // store product as "a" for reference
+  }
+  return { op, display, answer };
+}
+
+function nextProblem(s, ops) {
+  currentProblem = generateProblem(s, ops);
+  document.getElementById('gameProblem').textContent = currentProblem.display;
+  document.getElementById('gameHint').textContent = '';
+  const ansEl = document.getElementById('gameAnswer');
+  ansEl.classList.remove('wrong');
+  ansEl.value = '';
+}
+
+function checkAnswer(s, ops) {
+  const ansEl = document.getElementById('gameAnswer');
+  const val = parseInt(ansEl.value, 10);
+  if (isNaN(val)) return;
+  const op = currentProblem.op;
+  attempted++;
+  opStats[op].a++;
+  if (val === currentProblem.answer) {
+    score++;
+    opStats[op].c++;
+    updateScoreDisplay();
+    nextProblem(s, ops);
+  } else if (ansEl.value.length >= String(currentProblem.answer).length) {
+    ansEl.classList.add('wrong');
+    document.getElementById('gameHint').textContent = 'Keep trying…';
+  }
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timeLeft / 60);
+  const s = String(timeLeft % 60).padStart(2, '0');
+  const el = document.getElementById('gameTimer');
+  el.textContent = `${m}:${s}`;
+  el.classList.toggle('urgent', timeLeft <= 10);
+}
+
+function updateScoreDisplay() {
+  document.getElementById('gameScore').textContent = `Score: ${score}  |  Attempted: ${attempted}`;
+}
+
+function endGame(s) {
+  clearInterval(gameInterval);
+  gameInterval = null;
+  document.getElementById('gameAnswer').oninput = null;
+
+  const session = {
+    date: new Date().toISOString(),
+    duration: s.duration,
+    score,
+    attempted,
+    ops: {
+      '+': { correct: opStats['+'].c, attempted: opStats['+'].a },
+      '-': { correct: opStats['-'].c, attempted: opStats['-'].a },
+      '×': { correct: opStats['×'].c, attempted: opStats['×'].a },
+      '÷': { correct: opStats['÷'].c, attempted: opStats['÷'].a },
+    }
+  };
+
+  const players = loadPlayers();
+  players[activePlayer].sessions.push(session);
+  savePlayers(players);
+
+  showResults(session, players[activePlayer].sessions);
+}
+
+// ─── Results ──────────────────────────────────────────────────────────────────
+function showResults(session, allSessions) {
+  const acc = session.attempted ? Math.round(100 * session.score / session.attempted) : 0;
+  const best = Math.max(...allSessions.map(s => s.score));
+  const avg = allSessions.length ? Math.round(allSessions.reduce((s,x) => s + x.score, 0) / allSessions.length) : 0;
+
+  const cards = [
+    { val: session.score, lbl: 'Score' },
+    { val: acc + '%', lbl: 'Accuracy' },
+    { val: best, lbl: 'Personal best' },
+    { val: avg, lbl: 'Avg score' },
+    { val: allSessions.length, lbl: 'Games played' },
+  ];
+  document.getElementById('resultCards').innerHTML = cards
+    .map(c => `<div class="stat-box"><div class="val">${c.val}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+
+  const ops = [
+    ['+', 'Addition'], ['-', 'Subtraction'], ['×', 'Multiplication'], ['÷', 'Division']
+  ];
+  const tbody = document.querySelector('#opsTable tbody');
+  tbody.innerHTML = ops.map(([sym, _]) => {
+    const o = session.ops[sym];
+    if (!o || o.attempted === 0) return '';
+    const oa = o.attempted ? Math.round(100 * o.correct / o.attempted) : 0;
+    return `<tr><td>${sym}</td><td>${o.correct}</td><td>${o.attempted}</td><td>${oa}%</td></tr>`;
+  }).join('');
+
+  showPage('results');
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const players = loadPlayers();
+  const names = Object.keys(players).sort();
+
+  // init filter to all players
+  if (statsFilter.size === 0) names.forEach(n => statsFilter.add(n));
+  // remove stale
+  statsFilter.forEach(n => { if (!players[n]) statsFilter.delete(n); });
+
+  // player chips
+  const toggle = document.getElementById('playerToggle');
+  toggle.innerHTML = names.map((n, i) => {
+    const active = statsFilter.has(n);
+    const color = COLORS[i % COLORS.length];
+    const style = active ? `background:${color};color:#fff;border-color:${color}` : '';
+    return `<span class="player-chip ${active?'active':''}" style="${style}" onclick="toggleStatsPlayer('${n.replace(/'/g,"\\'")}',this,${i})">${n}</span>`;
+  }).join('');
+
+  // collect sessions for filtered players
+  const filtered = [];
+  statsFilter.forEach(n => {
+    (players[n]?.sessions || []).forEach(s => filtered.push({ ...s, player: n }));
+  });
+
+  renderSummaryCards(filtered);
+  renderAllOpsTable(filtered);
+  renderChart(players, names);
+  renderHistory(filtered);
+}
+
+function toggleStatsPlayer(name, el, idx) {
+  if (statsFilter.has(name)) {
+    if (statsFilter.size === 1) return; // keep at least one
+    statsFilter.delete(name);
+    el.classList.remove('active');
+    el.style.background = ''; el.style.color = ''; el.style.borderColor = '';
+  } else {
+    statsFilter.add(name);
+    el.classList.add('active');
+    const color = COLORS[idx % COLORS.length];
+    el.style.background = color; el.style.color = '#fff'; el.style.borderColor = color;
+  }
+  renderStats();
+}
+
+function renderSummaryCards(sessions) {
+  if (!sessions.length) {
+    document.getElementById('summaryCards').innerHTML = '<p style="color:var(--muted)">No sessions yet.</p>';
+    return;
+  }
+  const best = Math.max(...sessions.map(s => s.score));
+  const avg = Math.round(sessions.reduce((a,s) => a + s.score, 0) / sessions.length);
+  const last10 = sessions.slice().sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,10);
+  const avg10 = last10.length ? Math.round(last10.reduce((a,s) => a + s.score, 0) / last10.length) : 0;
+  const totalAtt = sessions.reduce((a,s) => a + (s.attempted||0), 0);
+  const totalCor = sessions.reduce((a,s) => a + s.score, 0);
+  const acc = totalAtt ? Math.round(100 * totalCor / totalAtt) : 0;
+
+  const cards = [
+    { val: best, lbl: 'Best score' },
+    { val: avg, lbl: 'Avg score (all)' },
+    { val: avg10, lbl: 'Avg score (last 10)' },
+    { val: sessions.length, lbl: 'Games played' },
+    { val: acc + '%', lbl: 'Overall accuracy' },
+  ];
+  document.getElementById('summaryCards').innerHTML = cards
+    .map(c => `<div class="stat-box"><div class="val">${c.val}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+}
+
+function renderAllOpsTable(sessions) {
+  const opNames = [['+','Addition'],['-','Subtraction'],['×','Multiplication'],['÷','Division']];
+  const tbody = document.querySelector('#allOpsTable tbody');
+  tbody.innerHTML = opNames.map(([sym]) => {
+    const rows = sessions.filter(s => s.ops && s.ops[sym] && s.ops[sym].attempted > 0);
+    if (!rows.length) return '';
+    const correct = rows.reduce((a,s) => a + s.ops[sym].correct, 0);
+    const att     = rows.reduce((a,s) => a + s.ops[sym].attempted, 0);
+    const avgC    = Math.round(correct / rows.length);
+    const best    = Math.max(...rows.map(s => s.ops[sym].correct));
+    const acc     = att ? Math.round(100 * correct / att) : 0;
+    return `<tr><td>${sym}</td><td>${rows.length}</td><td>${avgC}</td><td>${best}</td><td>${acc}%</td></tr>`;
+  }).join('');
+  if (!tbody.innerHTML.trim()) tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No data</td></tr>';
+}
+
+function filterByPeriod(sessions, period) {
+  if (period === 'All') return sessions;
+  const now = new Date();
+  const days = { '1W': 7, '1M': 30, '3M': 90, '1Y': 365 }[period] || 7;
+  const cutoff = new Date(now - days * 86400000);
+  return sessions.filter(s => new Date(s.date) >= cutoff);
+}
+
+function setPeriod(p, btn) {
+  currentPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const players = loadPlayers();
+  const names = Object.keys(players).sort();
+  renderChart(players, names);
+}
+
+function renderChart(players, names) {
+  const datasets = [];
+  names.forEach((name, i) => {
+    if (!statsFilter.has(name)) return;
+    const sessions = filterByPeriod(players[name]?.sessions || [], currentPeriod);
+    const sorted = sessions.slice().sort((a,b) => new Date(a.date) - new Date(b.date));
+    datasets.push({
+      label: name,
+      data: sorted.map(s => ({ x: s.date, y: s.score })),
+      borderColor: COLORS[i % COLORS.length],
+      backgroundColor: COLORS[i % COLORS.length] + '22',
+      tension: 0.3,
+      pointRadius: 4,
+      fill: false,
+    });
+  });
+
+  const ctx = document.getElementById('chartCanvas').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      scales: {
+        x: {
+          type: 'time',
+          time: { tooltipFormat: 'MMM d, yyyy HH:mm', unit: currentPeriod === '1W' ? 'day' : currentPeriod === '1M' ? 'week' : 'month' },
+          title: { display: true, text: 'Date' }
+        },
+        y: { title: { display: true, text: 'Score' }, beginAtZero: true }
+      },
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+}
+
+// ─── History table ────────────────────────────────────────────────────────────
+function renderHistory(sessions) {
+  let sorted = sessions.slice();
+  const { key, asc } = historySort;
+  sorted.sort((a, b) => {
+    let va, vb;
+    if (key === 'date') { va = new Date(a.date); vb = new Date(b.date); }
+    else if (key === 'score') { va = a.score; vb = b.score; }
+    else if (key === 'accuracy') {
+      va = a.attempted ? a.score / a.attempted : 0;
+      vb = b.attempted ? b.score / b.attempted : 0;
+    }
+    return asc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+  });
+
+  const total = sorted.length;
+  const maxPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+  historyPage = Math.min(historyPage, maxPage);
+  const slice = sorted.slice(historyPage * PAGE_SIZE, (historyPage + 1) * PAGE_SIZE);
+
+  const tbody = document.getElementById('historyBody');
+  tbody.innerHTML = slice.map(s => {
+    const d = new Date(s.date);
+    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const acc = s.attempted ? Math.round(100 * s.score / s.attempted) + '%' : 'N/A';
+    const dur = s.duration + 's';
+    return `<tr><td>${dateStr}</td><td>${s.score}</td><td>${acc}</td><td>${dur}</td><td>${s.player||''}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="color:var(--muted)">No sessions yet.</td></tr>';
+
+  // pagination
+  const pages = Math.ceil(total / PAGE_SIZE) || 1;
+  const pg = document.getElementById('pagination');
+  pg.innerHTML = `
+    <button class="btn btn-sm" onclick="changePage(-1)" ${historyPage===0?'disabled':''}>← Prev</button>
+    <span class="page-info">Page ${historyPage+1} of ${pages}</span>
+    <button class="btn btn-sm" onclick="changePage(1)" ${historyPage>=pages-1?'disabled':''}>Next →</button>
+  `;
+}
+
+function sortHistory(key) {
+  if (historySort.key === key) historySort.asc = !historySort.asc;
+  else { historySort.key = key; historySort.asc = false; }
+  historyPage = 0;
+  renderStats();
+}
+
+function changePage(dir) {
+  historyPage += dir;
+  renderStats();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+populatePlayerList();
+loadSettingsUI();
+</script>
+</body>
+</html>

@@ -266,6 +266,11 @@
     </table>
   </div>
 
+  <div class="card">
+    <h3>Score progression</h3>
+    <canvas id="resultChartCanvas" height="200"></canvas>
+  </div>
+
   <div class="row-end">
     <button class="btn" onclick="showHome()">Home</button>
     <button class="btn btn-primary" onclick="showStats()">View stats</button>
@@ -359,6 +364,7 @@ let currentProblem = null;
 
 // chart state
 let chartInstance = null;
+let resultChartInstance = null;
 let currentPeriod = '1W';
 let historySort = { key: 'date', asc: false };
 let historyPage = 0;
@@ -639,6 +645,36 @@ function showResults(session, allSessions) {
   }).join('');
 
   showPage('results');
+  renderResultChart(allSessions);
+}
+
+function renderResultChart(sessions) {
+  const sorted = sessions.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  const ctx = document.getElementById('resultChartCanvas').getContext('2d');
+  if (resultChartInstance) resultChartInstance.destroy();
+  resultChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: activePlayer,
+        data: sorted.map(s => ({ x: s.date, y: s.score })),
+        borderColor: COLORS[0],
+        backgroundColor: COLORS[0] + '22',
+        tension: 0.3,
+        pointRadius: sorted.map((_, i) => i === sorted.length - 1 ? 7 : 4),
+        pointBackgroundColor: sorted.map((_, i) => i === sorted.length - 1 ? COLORS[1] : COLORS[0]),
+        fill: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { type: 'time', time: { tooltipFormat: 'MMM d, yyyy HH:mm' }, title: { display: true, text: 'Date' } },
+        y: { title: { display: true, text: 'Score' }, beginAtZero: true }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
 }
 
 // ─── Stats ────────────────────────────────────────────────────────────────────

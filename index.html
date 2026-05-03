@@ -48,16 +48,27 @@ body::after{
 
 #warrior-layer{
   position:fixed;right:0;top:0;bottom:0;
-  width:58%;z-index:1;
-  display:flex;align-items:center;justify-content:flex-end;
+  width:55%;z-index:1;
+  display:flex;align-items:flex-end;justify-content:center;
   pointer-events:none;
 }
-#warrior-layer svg{height:95vh;width:auto;max-width:640px;opacity:.92}
+#warrior-img{
+  height:100vh;width:auto;object-fit:cover;object-position:top center;
+  opacity:.82;
+  /* fade edges so it blends into the dark background */
+  -webkit-mask-image:linear-gradient(to left,rgba(0,0,0,.9) 40%,transparent 100%),
+                     linear-gradient(to top,rgba(0,0,0,1) 70%,transparent 100%);
+  -webkit-mask-composite:destination-in;
+  mask-image:linear-gradient(to left,rgba(0,0,0,.9) 40%,transparent 100%),
+             linear-gradient(to top,rgba(0,0,0,1) 70%,transparent 100%);
+  mask-composite:intersect;
+  filter:drop-shadow(-8px 0 40px rgba(255,26,46,0.25));
+}
 
-/* Right edge fade on warrior */
+/* Left edge fade so panels blend in */
 #warrior-layer::after{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:38%;
-  background:linear-gradient(90deg,var(--bg),transparent);
+  content:'';position:absolute;left:0;top:0;bottom:0;width:45%;
+  background:linear-gradient(90deg,var(--bg) 20%,transparent);
   pointer-events:none;
 }
 
@@ -464,7 +475,8 @@ select option{background:#0d0d1a}
 
 <!-- ── Background: Warrior ── -->
 <div id="warrior-layer">
-<svg viewBox="0 0 520 820" xmlns="http://www.w3.org/2000/svg">
+<img src="warrior.png" alt="" id="warrior-img">
+<svg viewBox="0 0 520 820" xmlns="http://www.w3.org/2000/svg" style="display:none">
   <defs>
     <!-- Glow filters -->
     <filter id="crimsonGlow" x="-60%" y="-60%" width="220%" height="220%">

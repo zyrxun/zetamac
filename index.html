@@ -1171,7 +1171,7 @@ function startGame(){
   ansEl.classList.remove('wrong');ansEl.value='';
   // small delay so page render completes before focus
   setTimeout(()=>ansEl.focus(),80);
-  nextProblem(s,ops,true);
+  nextProblem(s,ops);
   ansEl.oninput=()=>checkAnswer(s,ops);
 
   gameInterval=setInterval(()=>{timeLeft--;updateTimerDisplay();if(timeLeft<=0)endGame(s)},1000);
@@ -1189,21 +1189,11 @@ function generateProblem(s,ops){
   return{op,display,answer};
 }
 
-function nextProblem(s,ops,immediate=false){
-  const prob=document.getElementById('gameProblem');
+function nextProblem(s,ops){
   const ansEl=document.getElementById('gameAnswer');
   ansEl.classList.remove('wrong');ansEl.value='';
-  if(immediate){
-    currentProblem=generateProblem(s,ops);prob.textContent=currentProblem.display;
-    prob.classList.remove('slash-out','slash-in');void prob.offsetWidth;prob.classList.add('slash-in');
-    return;
-  }
-  prob.classList.add('slash-out');
-  setTimeout(()=>{
-    currentProblem=generateProblem(s,ops);prob.textContent=currentProblem.display;
-    prob.classList.remove('slash-out');void prob.offsetWidth;prob.classList.add('slash-in');
-    setTimeout(()=>prob.classList.remove('slash-in'),200);
-  },115);
+  currentProblem=generateProblem(s,ops);
+  document.getElementById('gameProblem').textContent=currentProblem.display;
 }
 
 function checkAnswer(s,ops){
